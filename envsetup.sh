@@ -54,8 +54,8 @@ function build_build_var_cache()
     local T=$(gettop)
     local one_true_awk=$T/prebuilts/build-tools/$(get_host_prebuilt_prefix)/bin/one-true-awk
     # Grep out the variable names from the script.
-    cached_vars=(`cat $T/build/envsetup.sh $T/vendor/lineage/build/envsetup.sh | tr '()' '  ' | $one_true_awk '{for(i=1;i<=NF;i++) if($i~/_get_build_var_cached/) print $(i+1)}' | sort -u | tr '\n' ' '`)
-    cached_abs_vars=(`cat $T/build/envsetup.sh $T/vendor/lineage/build/envsetup.sh | tr '()' '  ' | $one_true_awk '{for(i=1;i<=NF;i++) if($i~/_get_abs_build_var_cached/) print $(i+1)}' | sort -u | tr '\n' ' '`)
+    cached_vars=(`cat $T/build/envsetup.sh $T/vendor/aosp/build/envsetup.sh | tr '()' '  ' | $one_true_awk '{for(i=1;i<=NF;i++) if($i~/_get_build_var_cached/) print $(i+1)}' | sort -u | tr '\n' ' '`)
+    cached_abs_vars=(`cat $T/build/envsetup.sh $T/vendor/aosp/build/envsetup.sh | tr '()' '  ' | $one_true_awk '{for(i=1;i<=NF;i++) if($i~/_get_abs_build_var_cached/) print $(i+1)}' | sort -u | tr '\n' ' '`)
     # Call the build system to dump the "<val>=<value>" pairs as a shell script.
     build_dicts_script=`\builtin cd $T; build/soong/soong_ui.bash --dumpvars-mode \
                         --vars="${cached_vars[*]}" \
@@ -459,15 +459,6 @@ function _lunch_meat()
         then
             echo "Did you mean -${product/*_/}? (dash instead of underscore)"
         fi
-        echo
-        echo "** Don't have a product spec for: '$product'"
-        echo "** Do you have the right repo manifest?"
-        product=
-    fi
-
-    if [ -z "$product" -o -z "$variant" ]
-    then
-        echo
         return 1
     fi
     export TARGET_PRODUCT=$(_get_build_var_cached TARGET_PRODUCT)
@@ -496,7 +487,7 @@ function _lunch_meat()
     set_stuff_for_environment
     [[ -n "${ANDROID_QUIET_BUILD:-}" ]] || printconfig
 
-    if [[ -z "${ANDROID_QUIET_BUILD}" && -z "${LINEAGE_BUILD}" ]]; then
+    if [[ -z "${ANDROID_QUIET_BUILD}" && -z "${AOSP_BUILD}" ]]; then
         local spam_for_lunch=$(gettop)/build/make/tools/envsetup/spam_for_lunch
         if [[ -x $spam_for_lunch ]]; then
             $spam_for_lunch
@@ -611,17 +602,16 @@ function lunch()
 
     if ! check_product $product $release
     then
-        # if we can't find a product, try to grab it off the LineageOS GitHub
-        T=$(gettop)
-        cd $T > /dev/null
-        vendor/lineage/build/tools/roomservice.py $product
-        cd - > /dev/null
-        check_product $product $release
-    else
-        T=$(gettop)
-        cd $T > /dev/null
-        vendor/lineage/build/tools/roomservice.py $product true
-        cd - > /dev/null
+        echo
+        echo "** Don't have a product spec for: '$product'"
+        echo "** Do you have the right repo manifest?"
+        product=
+    fi
+
+    if [ -z "$product" -o -z "$variant" ]
+    then
+        echo
+        return 1
     fi
 
     # Validate the selection and set all the environment stuff
@@ -1223,4 +1213,4 @@ fi
 
 export ANDROID_BUILD_TOP=$(gettop)
 
-. $ANDROID_BUILD_TOP/vendor/lineage/build/envsetup.sh
+. $ANDROID_BUILD_TOP/vendor/aosp/build/envsetup.sh
